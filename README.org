@@ -1,0 +1,86 @@
+#+title: Embedded Image Builder
+#+author: Brian Kubisiak
+
+Generate an alpine linux rootfs for an aarch64 device without root
+priveleges.
+
+When developing a rootfs for an embedded linux system, the usual
+process is something like:
+  1. Install packages into some directory.
+  2. ~chroot~ into the directory (with an emulator) and fix up
+     anything that broke.
+  3. Prune the resulting directory to remove unnecessary files and
+     save space.
+
+With most commonly-used linux distros, these steps typically require
+root privileges (and I haven't had much luck with ~fakeroot~ and
+friends). This project aims to solve this problem by running in a
+separate namespace. This allows mounting kernel filesystems,
+~chroot~'ing, and installing packages as "root" in a fake rootfs
+without requiring ~sudo~ access.
+
+** Design Goals
+
+This project aims to fix many of the issues I run into with typical
+embedded rootfs generators:
+  - Do not require root priveleges. Running as the regular user limits
+    the damage buggy (or compromised) code can do on the host system.
+    It also means the user will never need to enter a password during
+    the build.
+  - Easily extensible with shell scripts. Most of the stages required
+    during the build require running some shell commands; I want to
+    make it as easy as possible to add addtional scripts to modify the
+    rootfs during each stage.
+  - All customization is done in a config file. In particular, there
+    are no command-line arguments, so all configuration is saved in
+    SCM.
+  - Allow checkpointing various stages in the build, for speeding up
+    incremental builds.
+  - Easily ~chroot~ into the rootfs for easy debugging.
+
+* Host System Setup
+
+In theory, any modern linux system can be used to generate images. In
+practice, I'm developing this on gentoo, so that will likely be the
+best-supported.
+
+** Kernel Setup
+
+You need the following options enabled in the kernel:
+  - ~CONFIG_KVM=y~
+  - ~CONFIG_BINFMT_MISC=y~
+  - ~CONFIG_USER_NS=y~
+  - ~CONFIG_OVERLAY_FS=y~
+
+These should be enabled in most modern linux distros, but may need to
+be manually added if you have a custom kernel.
+
+Probably the most difficult requirement is allowing unprivileged
+overlayfs mounts in user namespaces. This feature was first introduced
+in the 5.11 tree at the end of 2020, so a custom kernel may be
+required to get this working.
+
+** Alpine Tools
+
+You'll need ~apk-tools~ and alpine keys installed on your
+system. Unless your host is alpine linux, these are unlikely to be
+installed by default or available in your package repos, so you'll
+have to install from source. The ~apk-tools~ code can be cloned from
+[[https://git.alpinelinux.org/apk-tools]]. Alpine keys can be cloned from
+https://git.alpinelinux.org/aports (the keys are in
+~aports/main/alpine-keys~).
+
+** QEMU Setup
+
+You'll need ~qemu~ installed, statically-linked, with usermode
+emulation and the correct architecture. On gentoo, this means setting
+~USE=static-user~ and ~QEMU_USER_TARGETS=aarch64~ (or any other
+architecture that you intend to emulate).
+
+You'll also need to set up ~binfmt_misc~ on boot. On gentoo with
+OpenRC, this can be done with:
+
+#+BEGIN_SRC sh
+  rc-update add qemu-binfmt default
+  rc-config start qemu-binfmt
+#+END_SRC
