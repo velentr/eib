@@ -37,12 +37,13 @@ fix() {
 	rc-update add bootmisc boot
 	rc-update add syslog boot
 
-	# TODO don't hardcode this here
-	rc-update add dropbear boot
-
 	rc-update add mount-ro shutdown
 	rc-update add killprocs shutdown
 	rc-update add savecache shutdown
+
+	for s in ${SERVICES}; do
+		rc-update add ${s} boot
+	done
 }
 
 down() {
