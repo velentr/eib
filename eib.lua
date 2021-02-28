@@ -11,6 +11,11 @@ confun = loadfile("./config.lua")
 setfenv(confun, config)
 confun()
 
+-- append an empty snapshot at the end for chroot/down changes to use; prevents
+-- polluting the last snapshot with unrelated changes and allows chroot into the
+-- final rootfs without having to find the last snapshot in use
+config.snapshots[#config.snapshots+1] = {name = "root", modules = {}}
+
 TARGET = "./root"
 QEMU="/usr/bin/qemu-aarch64"
 
@@ -246,10 +251,13 @@ function do_build(snapshot)
 end
 
 function do_chroot(snapshot)
-    -- load (but do not reset) the given snapshot if given
-    if snapshot ~= nil then
-        ckp.load(snapshot)
+    -- if no snapshot is provided, load the final root snapshot
+    if snapshot == nil then
+        snapshot = "root"
     end
+
+    -- load (but do not reset) the given snapshot
+    ckp.load(snapshot)
 
     -- open a chroot shell
     chroot("/bin/sh")
