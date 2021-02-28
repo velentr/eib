@@ -95,7 +95,7 @@ static int child_fn(void *arg)
 		/* futex may have spurious wakeups; double check here */
 	} while (__atomic_load_n(lock, __ATOMIC_SEQ_CST) == 0);
 
-	execvp("bash", argv);
+	execvp("eib.lua", argv);
 	/* execvp only returns on failure */
 	err(EXIT_FAILURE, "execvp");
 }
@@ -120,7 +120,7 @@ int main(int argc, const char * const argv[])
 
 	child_pid = clone(child_fn, stack + sizeof(stack),
 			  CLONE_NEWNS | CLONE_NEWUSER | CLONE_NEWPID | SIGCHLD,
-			  (void *)&argv[1]);
+			  (void *)argv);
 	if (child_pid == -1)
 		err(EXIT_FAILURE, "clone");
 

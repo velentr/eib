@@ -18,7 +18,7 @@ do_up() {
 	fi
 
 	unset -f up
-	. "./${1}.sh"
+	. "${1}"
 	if is_function up; then
 		up
 		unset -f up
@@ -27,7 +27,7 @@ do_up() {
 
 do_fix() {
 	unset -f fix
-	. "/${EIB_PATH}/${1}.sh"
+	. "${1}"
 	if is_function fix; then
 		fix
 		unset -f fix
@@ -44,7 +44,7 @@ do_down() {
 	fi
 
 	unset -f down
-	. "./${1}.sh"
+	. "${1}"
 	if is_function down; then
 		down
 		unset -f down
@@ -66,6 +66,10 @@ case "$stage" in
 esac
 
 for m in $modules; do
+	if [ ! -f "$m" ]; then
+		echo "$m does not exist!"
+		exit 1
+	fi
 	echo "  $m"
 	do_${stage} "$m"
 done

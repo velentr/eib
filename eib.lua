@@ -153,9 +153,15 @@ function chroot(command)
     return rc
 end
 
+function find_module(mod)
+    -- TODO allow a list of paths and search through them
+    return config.path.mod .. "/" .. mod .. ".sh"
+end
+
 function eib_run(stage, mod)
     local env = genenv(mod) .. " TARGET=" .. TARGET
-    return env .. " ./eib-run.sh " .. stage .. " " .. mod
+    local modpath = find_module(mod)
+    return env .. " " .. config.path.run .. " " .. stage .. " " .. modpath
 end
 
 function do_up(mod)
@@ -167,9 +173,13 @@ end
 
 function do_fix(mod)
     local env = genenv(mod)
+    local modpath = "/opt/eib/" .. mod .. ".sh"
     -- busybox symlinks aren't installed yet (namely, /usr/bin/env doesn't
     -- exist), so we call the busybox binary directly
-    chroot("/bin/busybox " .. env .. " /opt/eib/eib-run.sh fix " .. mod)
+    rc = chroot("/bin/busybox " .. env .. " /opt/eib/eib-run.sh fix " .. modpath)
+    if rc ~= 0 then
+        error("failed fixing " .. mod)
+    end
 end
 
 function do_down(mod)
@@ -189,14 +199,14 @@ function do_setup_fix()
 
     for i, snapshot in ipairs(config.snapshots) do
         for j, mod in ipairs(snapshot.modules) do
-            rc = os.execute("cp " .. mod .. ".sh " .. eib_path)
+            rc = os.execute("cp " .. find_module(mod) .. " " .. eib_path)
             if rc ~= 0 then
                 error("failed copying " .. mod .. " to " .. eib_path)
             end
         end
     end
 
-    rc = os.execute("cp eib-run.sh " .. eib_path)
+    rc = os.execute("cp " .. config.path.run .. " " .. eib_path)
     if rc ~= 0 then
         error("failed copying eib-run.sh to " .. eib_path)
     end
