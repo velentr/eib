@@ -16,8 +16,8 @@ confun()
 -- final rootfs without having to find the last snapshot in use
 config.snapshots[#config.snapshots+1] = {name = "root", modules = {}}
 
-TARGET = "./root"
-QEMU="/usr/bin/qemu-aarch64"
+TARGET = config.path.target
+QEMU = config.path.qemu
 
 fs = {}
 function fs.rmtree(dir)
